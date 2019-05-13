@@ -7,77 +7,10 @@ Draw.loadPlugin(function(editorUi)
 	var keep = '\n\t`~!@#$%^&*()_+{}|:"<>?-=[]\;\'.\/,\n\t';
 	
 	// Adds resource for action
-	mxResources.parse('anonymizeCurrentPage=Anonymize Current Page');
-	
-	function anonymizeString(text)
-	{
-		var result = [];
-		
-		for (var i = 0; i < text.length; i++)
-		{
-			var c = text.charAt(i);
-			
-			if (keep.indexOf(c) >= 0)
-			{
-				result.push(c);
-			}
-			else if (!isNaN(parseInt(c)))
-			{
-				result.push(Math.round(Math.random() * 9));
-			}
-			else if (c.toLowerCase() != c)
-			{
-				result.push(String.fromCharCode(65 + Math.round(Math.random() * 25)));
-			}
-			else if (c.toUpperCase() != c)
-			{
-				result.push(String.fromCharCode(97 + Math.round(Math.random() * 25)));
-			}
-			else if (/\s/.test(c))
-			{
-				/* any whitespace */
-				result.push(' ');
-			}
-			else
-			{
-				result.push('�');
-			}
-		}
-		
-		return result.join('');
-	};
-	
-	function replaceTextContent(elt)
-	{
-		if (elt.nodeValue != null)
-		{
-			elt.nodeValue = anonymizeString(elt.nodeValue);
-		}
-		
-		if (elt.nodeType == mxConstants.NODETYPE_ELEMENT)
-		{
-			var tmp = elt.firstChild;
-			
-			while (tmp != null)
-			{
-				replaceTextContent(tmp);
-				tmp = tmp.nextSibling;
-			}
-		}
-	};
+	mxResources.parse('switchFR=Switch FR');
+	mxResources.parse('switchEN=Switch EN');
 
-	
-	function anonymizeHtml(html)
-	{
-		div.innerHTML = html;
-		
-		replaceTextContent(div);
-		
-		return div.innerHTML;
-	};
-
-	// Adds action
-	editorUi.actions.addAction('anonymizeCurrentPage', function()
+	function switchLanguage(language)
 	{
 		var graph = editorUi.editor.graph;
 		var model = graph.model;
@@ -91,29 +24,45 @@ Draw.loadPlugin(function(editorUi)
 			for (var id in model.cells)
 			{
 				var cell = model.cells[id];
-				var label = graph.getLabel(cell);
+				var value = cell.value;
 				
-				if (graph.isHtmlLabel(cell))
+				if (mxUtils.isNode(cell.value) && value.getAttribute('placeholders') == '1' )
 				{
-					label = anonymizeHtml(label);
-				}
-				else
-				{
-					label = anonymizeString(label);
+					var hasAttribute = false;
+					for (var i = 0; i < cell.value.attributes.length; i++)
+					{	
+						if(value.attributes[i].name == language)
+							hasAttribute = true;
+					}
+					
+					if(hasAttribute)
+						value.setAttribute('label','%'+language+'%');
+
 				}
 				
-				queue.push({cell: cell, label: label});
+				queue.push({cell: cell, value: value});
 			}
 			
 			for (var i = 0; i < queue.length; i++)
 			{
-				model.setValue(queue[i].cell, queue[i].label);
+				model.setValue(queue[i].cell, queue[i].value);
 			}
 		}
 		finally
 		{
 			model.endUpdate();
 		}
+	}
+	
+	// Adds action
+	editorUi.actions.addAction('switchFR', function()
+	{
+		switchLanguage('FR');
+	});
+	
+	editorUi.actions.addAction('switchEN', function()
+	{
+		switchLanguage('EN');
 	});
 	
 	var menu = editorUi.menus.get('extras');
@@ -123,7 +72,8 @@ Draw.loadPlugin(function(editorUi)
 	{
 		oldFunct.apply(this, arguments);
 		
-		editorUi.menus.addMenuItems(menu, ['-', 'anonymizeCurrentPage'], parent);
+		editorUi.menus.addMenuItems(menu, ['-', 'switchFR'], parent);
+		editorUi.menus.addMenuItems(menu, ['-', 'switchEN'], parent);
 	};
 
 });
